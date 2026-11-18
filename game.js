@@ -350,7 +350,7 @@ let state = 'ready';            // ready | playing | over
 let speed, scroll = 0, score, nextGap, time = 0, overAt = 0, flash = 0, dustClock = 0;
 let scene = 0, prevScene = 0, sceneBase = 0, sceneFade = 1;
 // things to pick up during a run, and what this run has earned so far
-let pickups = [], runCoins = 0, runEggs = 0, nextEggAt = 0, nextPowerAt = 0;
+let pickups = [], runCoins = 0, runEggs = 0, runJumps = 0, nextEggAt = 0, nextPowerAt = 0;
 let shield = false, magnetT = 0, invulnT = 0;
 let summary = null;                            // rewards of the last run, for the game-over screen
 let toast = null;                              // { msg, until }: a short message on the menu
@@ -361,7 +361,7 @@ const inRect = (c, x, y) => x >= c.x && x <= c.x + c.w && y >= c.y && y <= c.y +
 function reset() {
   speed = START_SPEED; score = 0; nextGap = 420; flash = 0; sceneBase = scene;
   obstacles = []; particles = []; pickups = [];
-  runCoins = 0; runEggs = 0; nextEggAt = rand(70, 130); nextPowerAt = rand(140, 220);
+  runCoins = 0; runEggs = 0; runJumps = 0; nextEggAt = rand(70, 130); nextPowerAt = rand(140, 220);
   shield = false; magnetT = 0; invulnT = 0; summary = null;
   Object.assign(dino, { y: 0, vy: 0, onGround: true, ducking: false, dead: false });
 }
@@ -393,7 +393,7 @@ function pressJump() {
   if (state === 'ready') { if (!tryStart()) return; }
   else if (state === 'over') { if (time - overAt > 0.45) { reset(); state = 'playing'; } return; }
   if (dino.onGround) {
-    dino.vy = canFly() ? 420 : JUMP_V; dino.onGround = false; dino.ducking = false;
+    dino.vy = canFly() ? 420 : JUMP_V; dino.onGround = false; dino.ducking = false; runJumps++;
     puff(...feet(), 7, 60, speed * 0.3); grains(...feet(), 10, 150, speed * 0.3);
     beep(520, 0.12, 'square', 0.05, 260);
   }
@@ -503,7 +503,9 @@ function gameOver() {
   if (newBest) save.best = Math.floor(score);
   save.coins += runCoins; save.eggs += runEggs; save.runs++;
   const ups = addXp(xp);                                    // also saves
-  summary = { coins: runCoins, eggs: runEggs, xp, ups, newBest };
+  const mission = checkMission({ coins: runCoins, score: Math.floor(score), jumps: runJumps, eggs: runEggs });
+  summary = { coins: runCoins, eggs: runEggs, xp, ups, newBest, mission };
+  persist();
   runCoins = 0; runEggs = 0;
   if (ups.length) setTimeout(() => { beep(784, 0.1, 'triangle', 0.07); setTimeout(() => beep(1175, 0.22, 'triangle', 0.07), 120); }, 500);
 }
@@ -595,7 +597,7 @@ function drawHud() {
 }
 
 // ------------------------------------------------------------- inventory ---
-const BAG_BTN = { x: 150, y: 640, w: 240, h: 52 };          // on the menu
+const BAG_BTN = { x: 150, y: 676, w: 240, h: 52 };          // on the menu
 const HATCH_BTN = { x: 140, y: 610, w: 260, h: 58 };        // inside the inventory
 const BACK_BTN = { x: 170, y: 762, w: 200, h: 48 };
 
@@ -724,7 +726,7 @@ function drawCarousel() {
     paint(i === selected ? '#ffe14a' : 'rgba(255,255,255,.75)', 'rgba(40,30,20,.8)', 2);
   }
 }
-const CHANGE_BTN = { x: 160, y: 470, w: 220, h: 44 };
+const CHANGE_BTN = { x: 160, y: 496, w: 220, h: 44 };
 
 function render() {
   ctx.fillStyle = '#f3dcae'; ctx.fillRect(0, 0, W, H);
@@ -754,6 +756,8 @@ function render() {
     if (lockedNow || Math.floor(time * 2) % 2 === 0) text(line, W / 2, ty, 19, 'center', lockedNow && !chk.ok ? '#ff8a7a' : '#fff');
     text(canFly() ? 'This one flies: hold SPACE or keep touching' : 'In the run: tap to jump, touch and hold to slide', W / 2, ty + 30, 16, 'center', '#ffe9c2');
     button(BAG_BTN, 'INVENTORY' + (save.eggs ? `  (${save.eggs} egg${save.eggs > 1 ? 's' : ''})` : ''), 21);
+    text('MISSION', W / 2, 638, 14, 'center', '#ffe14a');
+    text(`${missionText()}  \u00b7  +${save.mission.reward} coins`, W / 2, 660, 17);
   } else if (state === 'over') {
     text('GAME OVER', W / 2, 300, 60, 'center', '#ff6b5e');
     text('Score ' + Math.floor(score) + (summary && summary.newBest ? '  \u00b7  new best!' : ''), W / 2, 346, 24);
@@ -766,8 +770,10 @@ function render() {
         text(`LEVEL UP!  Level ${last.level}  \u00b7  +${won} coins, +${summary.ups.length} egg${summary.ups.length > 1 ? 's' : ''}`, W / 2, 418, 18, 'center', '#ffe14a');
       }
     }
+    if (summary && summary.mission)
+      text(`Mission done: ${summary.mission.text}  \u00b7  +${summary.mission.reward} coins`, W / 2, 444, 16, 'center', '#7dff7d');
     if (time - overAt > 0.45) {
-      text('Tap or press SPACE to run again', W / 2, 452, 19, 'center', '#ffe9c2');
+      text('Tap or press SPACE to run again', W / 2, 478, 19, 'center', '#ffe9c2');
       rr(CHANGE_BTN.x, CHANGE_BTN.y, CHANGE_BTN.w, CHANGE_BTN.h, 12); paint('rgba(0,0,0,.4)', '#fff', 2);
       text('MENU (C)', W / 2, CHANGE_BTN.y + 29, 17);
     }

@@ -90,6 +90,35 @@ function hatchEgg(lockedIds) {
   return res;
 }
 
+// ----------------------------------------------------------------- missions ---
+// One mission is active at a time. Meeting its goal within a single run pays
+// coins and rolls a new one. Goals get harder as the player levels up.
+const MISSIONS = [
+  { id: 'coins', goals: [15, 25, 40], text: n => `Collect ${n} coins in one run` },
+  { id: 'score', goals: [150, 300, 500], text: n => `Score ${n} in one run` },
+  { id: 'jumps', goals: [12, 25, 40], text: n => `Jump ${n} times in one run` },
+  { id: 'eggs', goals: [1, 1, 2], text: n => (n > 1 ? `Pick up ${n} eggs in one run` : 'Pick up an egg in a run') },
+];
+function newMission() {
+  const pool = MISSIONS.filter(m => !save.mission || m.id !== save.mission.id);   // never the same twice running
+  const m = pool[Math.floor(Math.random() * pool.length)];
+  const top = Math.min(2, Math.floor((save.level - 1) / 3));
+  const tier = Math.floor(Math.random() * (top + 1));
+  save.mission = { id: m.id, goal: m.goals[tier], reward: 30 + tier * 25 };
+  persist();
+}
+const missionText = () => (MISSIONS.find(m => m.id === save.mission.id) || MISSIONS[0]).text(save.mission.goal);
+/** stats: { coins, score, jumps, eggs } for the run just finished. */
+function checkMission(stats) {
+  const m = save.mission;
+  if (!m || (stats[m.id] || 0) < m.goal) return null;
+  save.coins += m.reward;
+  const done = { text: missionText(), reward: m.reward };
+  newMission();
+  return done;
+}
+if (!save.mission || !MISSIONS.some(m => m.id === save.mission.id)) newMission();
+
 // -------------------------------------------------------------- pixel icons ---
 // Each icon is a tiny canvas painted pixel by pixel, then drawn enlarged with
 // smoothing off so it stays blocky.
