@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dino Rush</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #1d2433; color: #f4ead7;
+    font-family: "Trebuchet MS", "Segoe UI", sans-serif; }
+  body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; overflow: hidden; }
+  #wrap { position: relative; width: min(96vw, 540px, calc((100dvh - 56px) * 0.5625)); }
+  canvas { display: block; width: 100%; aspect-ratio: 540 / 960; border-radius: 14px;
+    box-shadow: 0 10px 40px rgba(0,0,0,.45); touch-action: none; cursor: pointer; }
+  #duck { display: none; position: absolute; left: 12px; bottom: 12px; width: 76px; height: 76px;
+    border-radius: 50%; border: 3px solid rgba(255,255,255,.7); background: rgba(0,0,0,.3);
+    color: #fff; font: bold 15px inherit; touch-action: none; user-select: none; }
+  p { margin: 0; font-size: 12px; opacity: .75; text-align: center; padding: 0 12px; }
+  kbd { background: #333c52; border-radius: 4px; padding: 1px 6px; }
+</style>
+</head>
+<body>
+  <div id="wrap">
+    <canvas id="game" width="540" height="960"></canvas>
+    <button id="duck" aria-label="Duck">DUCK</button>
+  </div>
+  <p>Tap or <kbd>Space</kbd> jump &nbsp;·&nbsp; hold touch or <kbd>↓</kbd> slide &nbsp;·&nbsp; <kbd>M</kbd> mute &nbsp;·&nbsp; swipe or <kbd>←</kbd> <kbd>→</kbd> choose dino &nbsp;·&nbsp; <kbd>I</kbd> inventory</p>
+  <script src="assets/dinos/dinos.js"></script>
+  <script src="assets/dinos/enemies.js"></script>
+  <script src="progress.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

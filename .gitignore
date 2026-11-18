@@ -1,0 +1,4 @@
+assets/source/
+.claude/
+*.pyc
+__pycache__/
